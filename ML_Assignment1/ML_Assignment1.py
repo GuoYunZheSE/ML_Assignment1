@@ -5,10 +5,10 @@ from numpy import random
 
 #Read Data
 m=input("Please input the Columns:\n")#m in my datadset is 4177
-n=input("Please input the Columns:\n")#n in my datadset is 8
+n=input("Please input the Rows:\n")#n in my datadset is 8
 m=int(m)
 n=int(n)
-Data=numpy.loadtxt('./DataSet/abalone.txt')
+Data=numpy.loadtxt('G:\\2017\\VS2017\\ML_Assignment1\\ML_Assignment1\\DataSet\\abalone.txt')
 Y=Data[:,0].reshape(m,1)
 X=Data[:,1:n+1]
 
@@ -43,8 +43,10 @@ while count<=max_loop:
         break
     else:
         error=W
-        #print(count)  #You can choose whether to print Count/W 
-        #print(W)
+        #0.5*lambda*W'*W+0.5*(Y-X*W)'*(Y-X*W)
+        print(0.5*(Y-X.dot(W)).transpose().dot((Y-X.dot(W))))
+        print(count)  #You can choose whether to print Count/W
+        print(W)
    
 #Compare
 W_Original=numpy.dot(X.transpose(),X)

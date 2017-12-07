@@ -12,6 +12,7 @@ def Grad(m_lambda,W,train_X):
 
 def Draw(loops,train_loss,validation_loss):
     # the first 100loops
+    print('Drawing...')
     plt.plot(np.arange(0,200,1), train_loss[0:200], label='Train Loss')
     plt.plot(np.arange(0,200,1), validation_loss[0:200], label='Validation Loss')
     plt.xlabel('loops')
@@ -28,9 +29,11 @@ def Draw(loops,train_loss,validation_loss):
     plt.title('The rest loops')
     plt.legend()
     plt.show()
+    print('Draw Completed')
 
 
 def BGD(parameters):
+    tic1=time.time()
     epsilon = parameters['epsilon']
     max_loop=parameters['max_loops']
     m_lambda=parameters['lambda']
@@ -62,14 +65,16 @@ def BGD(parameters):
             print('Loop {}'.format(count),'Loss_Train: ',Loss_Train/train_X.shape[0],'Loss_Validation: ', Loss_Validation/val_X.shape[0])
             # print(count)  #You can choose whether to print Count/W
             # print(W)
-    Draw(count,TL,VL)
+    print('BGD Completed Successfully. Time Used:{}s'.format(time.time()-tic1))
+    return count,TL,VL
 
 
 if __name__ == '__main__':
     # Cost Function:0.5*lambda*W'*W+0.5*(Y-X*W)'*(Y-X*W)
 
     # Read Data
-    Data_Path='G:\\2017\\VS2017\\ML_Assignment1\\ML_Assignment1\\DataSet\\housing.txt'
+    tic0=time.time()
+    Data_Path='/home/lucas/Codes/GitHub/ML_Assignment1/ML_Assignment1/DataSet/housing.txt'
     Data_Parameter,Data_Value=load_svmlight_file(Data_Path)
     Data_Parameter=Data_Parameter.toarray()
     train_X, val_X,train_Y,val_Y = train_test_split(Data_Parameter,Data_Value,test_size=0.3, random_state=1)
@@ -91,4 +96,6 @@ if __name__ == '__main__':
         'lambda':0.1,  # regularize
         'learning_rate':0.000085,  #learning rate
     }
-    BGD(Paramaters)
+    loops,train_loss,val_loss=BGD(Paramaters)
+    Draw(loops,train_loss,val_loss)
+    print('Maching Learning Lab-1:linear regression Completed Successfully. Time Used:{}s'.format(time.time()-tic0))

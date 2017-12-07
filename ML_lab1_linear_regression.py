@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -12,53 +11,40 @@ def Grad(m_lambda,W,train_X):
 
 
 def Draw(loops,train_loss,validation_loss):
-    #the first 100loops
-    plt.plot(np.arange(0,100,1), train_loss[0:100], label='Train Loss')
-    plt.plot(np.arange(0,100,1), validation_loss[0:100], label='Validation Loss')
+    # the first 100loops
+    plt.plot(np.arange(0,200,1), train_loss[0:200], label='Train Loss')
+    plt.plot(np.arange(0,200,1), validation_loss[0:200], label='Validation Loss')
     plt.xlabel('loops')
     plt.ylabel('loss')
-    plt.title('The First 100 loops')
-    plt.legend()
-    plt.show()
-    #the last 10000 loops
-    plt.plot(np.arange(loops-9999, loops-1, 1), train_loss[loops-9999:loops-1], label='Train Loss')
-    plt.plot(np.arange(loops-9999, loops-1, 1), validation_loss[loops-9999:loops-1], label='Validation Loss')
-    plt.xlabel('loops')
-    plt.ylabel('loss')
-    plt.title('The Last 10000 loops')
+    plt.title('The First 200 loops')
     plt.legend()
     plt.show()
 
-
-if __name__ == '__main__':
-    # Cost Function:0.5*lambda*W'*W+0.5*(Y-X*W)'*(Y-X*W)
-
-    # Read Data
-    Data_Path='/home/lucas/Codes/GitHub/ML_Assignment1/ML_Assignment1/DataSet/housing.txt'
-    Data_Parameter,Data_Value=load_svmlight_file(Data_Path)
-    Data_Parameter=Data_Parameter.toarray()
-    train_X, val_X,train_Y,val_Y = train_test_split(Data_Parameter,Data_Value,test_size=0.3, random_state=1)
-    t_row=train_X.shape[0]#Row Size
-    col=train_X.shape[1]#Column Size
-    v_row=val_X.shape[0]
-    train_Y=train_Y.reshape(t_row, 1)
-    val_Y=val_Y.reshape(v_row, 1)
-
-    # initial W, lambda and our learning rate N
-    W = np.random.random(size=(col, 1))
-    m_lambda = 0.01
-    N = 0.000085
+    # the last 10000 loops
+    plt.plot(np.arange(201, loops-1, 1), train_loss[201:loops-1], label='Train Loss')
+    plt.plot(np.arange(201, loops-1, 1), validation_loss[201:loops-1], label='Validation Loss')
+    plt.xlabel('loops')
+    plt.ylabel('loss')
+    plt.title('The rest loops')
+    plt.legend()
+    plt.show()
 
 
-
-
-    # BGD
-    max_loop = 100000 # in case it won't converage
-    epsilon = 0.000001
+def BGD(parameters):
+    epsilon = parameters['epsilon']
+    max_loop=parameters['max_loops']
+    m_lambda=parameters['lambda']
+    N=parameters['learning_rate']
+    train_X=parameters['train_X']
+    train_Y=parameters['train_Y']
+    val_X=parameters['val_X']
+    val_Y=parameters['val_Y']
+    W=parameters['Weights']
     count = 0
     error = np.zeros((col, 1))
     finish = 0
-    Tensor = np.dot(-train_X.transpose(), train_Y)  # It never change during our process, so I put it in a tensor
+    Tensor = np.dot(-train_X.transpose(), train_Y)  # It never change during our process, so I put it in a tensor to
+                                                    # decrease computation cost
     TL=[]
     VL=[]
     while count <= max_loop:
@@ -71,9 +57,38 @@ if __name__ == '__main__':
             error = W
             Loss_Train=0.5*m_lambda*W.transpose().dot(W)+0.5*(train_Y-train_X.dot(W)).transpose().dot((train_Y-train_X.dot(W)))
             Loss_Validation=0.5*m_lambda*W.transpose().dot(W)+0.5*(val_Y-val_X.dot(W)).transpose().dot((val_Y-val_X.dot(W)))
-            TL.append(Loss_Train[0]/t_row)
-            VL.append(Loss_Validation[0]/v_row)
-            print('Loop {}'.format(count),'Loss_Train: ',Loss_Train/t_row,'Loss_Validation: ', Loss_Validation/v_row)
+            TL.append(Loss_Train[0]/train_X.shape[0])
+            VL.append(Loss_Validation[0]/val_X.shape[0])
+            print('Loop {}'.format(count),'Loss_Train: ',Loss_Train/train_X.shape[0],'Loss_Validation: ', Loss_Validation/val_X.shape[0])
             # print(count)  #You can choose whether to print Count/W
             # print(W)
     Draw(count,TL,VL)
+
+
+if __name__ == '__main__':
+    # Cost Function:0.5*lambda*W'*W+0.5*(Y-X*W)'*(Y-X*W)
+
+    # Read Data
+    Data_Path='G:\\2017\\VS2017\\ML_Assignment1\\ML_Assignment1\\DataSet\\housing.txt'
+    Data_Parameter,Data_Value=load_svmlight_file(Data_Path)
+    Data_Parameter=Data_Parameter.toarray()
+    train_X, val_X,train_Y,val_Y = train_test_split(Data_Parameter,Data_Value,test_size=0.3, random_state=1)
+    t_row=train_X.shape[0]#Row Size
+    col=train_X.shape[1]#Column Size
+    v_row=val_X.shape[0]
+    train_Y=train_Y.reshape(t_row, 1)
+    val_Y=val_Y.reshape(v_row, 1)
+
+    W = np.random.random(size=(col, 1))
+    Paramaters={
+        'Weights': W,
+        'train_X':train_X,
+        'train_Y':train_Y,
+        'val_X':val_X,
+        'val_Y':val_Y,
+        'max_loops':100000,  # in case it won't converage
+        'epsilon':0.000001,  # if Wt+1-Wt<epsilon then stop BGD
+        'lambda':0.1,  # regularize
+        'learning_rate':0.000085,  #learning rate
+    }
+    BGD(Paramaters)

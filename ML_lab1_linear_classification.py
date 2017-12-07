@@ -66,10 +66,10 @@ def Draw(loops,train_loss,validation_loss,train_accuracy,val_accuracy):
 
 if __name__ == '__main__':
     # Read Data
-    Data_Path = '/home/lucas/Codes/GitHub/ML_Assignment1/ML_Assignment1/DataSet/australian_scale.txt'
+    Data_Path = 'G:\\2017\\VS2017\\ML_Assignment1\\ML_Assignment1\\DataSet\\australian_scale.txt'
     Data_Parameter, Data_Value = load_svmlight_file(Data_Path)
     Data_Parameter = Data_Parameter.toarray()
-    train_X, val_X, train_Y, val_Y = train_test_split(Data_Parameter, Data_Value, test_size=0.3, random_state=1)
+    train_X, val_X, train_Y, val_Y = train_test_split(Data_Parameter, Data_Value, test_size=0.25, random_state=1)
     t_row = train_X.shape[0]  # Row Size
     col = train_X.shape[1]  # Column Size
     v_row = val_X.shape[0]
@@ -79,8 +79,8 @@ if __name__ == '__main__':
     # initial W, C, b and our learning rate N
     W = np.random.random(size=(col, 1))
     b=2
-    N = 0.0000005
-    m_lambda = 0.1 #C=1/lambda
+    N = 0.000085
+    m_lambda = 0.01 #C=1/lambda
 
     # BGD
     max_loop = 100000  # in case it won't converage

@@ -64,6 +64,7 @@ def SGD(Parameters):
     N=Parameters['Learning_Rate']
     max_loop = Parameters['Max_Loops']
     epsilon = Parameters['Epsilon']
+    threshold=Parameters['threshold']
     count = 0
     error = np.zeros((col, 1))
     TL=[]#train loss
@@ -72,7 +73,7 @@ def SGD(Parameters):
     val_accuracy=[]
     while count <= max_loop:
         i=random.randint(0,train_X.shape[0])
-        grad = (sigmoid(train_X[i].dot(W)) - train_Y[i]).dot(train_X[i])
+        grad = ((sigmoid(train_X[i].dot(W)) - train_Y[i])*train_X[i]).resize(train_X.shape[1],1)
         count += 1
         W = W - N * grad
 
@@ -84,8 +85,8 @@ def SGD(Parameters):
             Loss_Validation = loss(val_X,val_Y,W)
             TL.append(Loss_Train[0] / train_X.shape[0])
             VL.append(Loss_Validation[0] / val_X.shape[0])
-            train_accuracy.append(accuracy(train_X,train_Y,W))
-            val_accuracy.append(accuracy(val_X,val_Y,W))
+            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
+            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train / t_row, 'Loss_Validation: ',
                   Loss_Validation / v_row)
             print('Accuracy: Train: {}, Validation: {}'.format(train_accuracy[count-1],val_accuracy[count-1]))
@@ -110,5 +111,7 @@ if __name__ == '__main__':
                'Weights':W,
                'Learning_Rate':0.000001,
                'Max_Loops':50000,
-               'Epsilon':0.00001}
+               'Epsilon':0.00001,
+               'threshold':0.5
+               }
     SGD(Parameter)

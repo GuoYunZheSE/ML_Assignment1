@@ -67,6 +67,7 @@ def accuracy(X,Y,W,threshold):
 
 
 def SGD(Parameters):
+    tic=time.time()
     train_X=Parameters['Train_X']
     train_Y=Parameters['Train_Y']
     val_X=Parameters['Val_X']
@@ -86,27 +87,30 @@ def SGD(Parameters):
     val_accuracy=[]
     test_accutacy=[]
     while count <= max_loop:
-        i=random.randint(0,train_X.shape[0]-1)
-        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
-        grad=grad.reshape(train_X.shape[1],1)
-        count =count+1
+        i = random.randint(0, train_X.shape[0] - 1)
+        grad = (hypothesis(W, train_X[i]) - train_Y[i]) * train_X[i]
+        grad = grad.reshape(train_X.shape[1], 1)
+        count = count + 1
         W = W - N * grad
         if np.linalg.norm(W - error) < epsilon:
             break
         else:
             error = W
-            Loss_Train = loss(train_X,train_Y,W)
-            Loss_Validation = loss(val_X,val_Y,W)
+            Loss_Train = loss(train_X, train_Y, W)
+            Loss_Validation = loss(val_X, val_Y, W)
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
-            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
-            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            train_accuracy.append(accuracy(train_X, train_Y, W, threshold))
+            val_accuracy.append(accuracy(val_X, val_Y, W, threshold))
+            test_accutacy.append(accuracy(Test_X, Test_Y, W, threshold))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
-                  Loss_Validation)
-            print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
+                    Loss_Validation)
+            print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count - 1],
+                                                                             val_accuracy[count - 1],
+                                                                             test_accutacy[count - 1]))
+    print('SGD Completed. Time Used:{}'.format(time.time()-tic))
     Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
-
+    return VL,test_accutacy
 
 def Momentum(Parameters):
     tic=time.time()
@@ -121,7 +125,7 @@ def Momentum(Parameters):
     threshold=Parameters['threshold']
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
-    gamma=Parameters['gamma']
+    gamma=Parameters['decoy_rate']
     count = 0
     error = np.zeros((train_X.shape[1], 1))
     velocity=np.zeros((train_X.shape[1],1))
@@ -158,7 +162,7 @@ def Momentum(Parameters):
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
     Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('Momentum Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
-
+    return VL,test_accutacy
 
 def NAG(Parameters):
     tic=time.time()
@@ -173,10 +177,11 @@ def NAG(Parameters):
     threshold=Parameters['threshold']
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
-    gamma=Parameters['gamma']
+    gamma=Parameters['decoy_rate']
     count = 0
     error = np.zeros((train_X.shape[1], 1))
     velocity=np.zeros((train_X.shape[1],1))
+    velocity_prev = np.zeros((train_X.shape[1], 1))
     TL=[]#train loss
     VL=[]#validation loss
     train_accuracy=[]
@@ -185,14 +190,14 @@ def NAG(Parameters):
     while count <= max_loop:
         count = count + 1
         i=random.randint(0,train_X.shape[0]-1)
-
         # Compute grad
         grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
         grad=grad.reshape(train_X.shape[1],1)
         # Compute velocity
-        velocity=gamma*velocity+N*grad
+        velocity_prev=velocity
+        velocity=gamma*velocity-N*grad
         # Gradient decent
-        W=W-velocity
+        W=W-gamma*velocity_prev+(1+gamma)*velocity
 
         # Use relative error to decide whether to stop
         if np.linalg.norm(W - error)/Max(W,error) < epsilon:
@@ -211,9 +216,252 @@ def NAG(Parameters):
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
     Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('Momentum Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
+    return VL, test_accutacy
+
+def Adagrad(Parameters):
+    # This method is NGA with the adaptive learning rate method: Adagrad
+    tic=time.time()
+    train_X=Parameters['Train_X']
+    train_Y=Parameters['Train_Y']
+    val_X=Parameters['Val_X']
+    val_Y=Parameters['Val_Y']
+    W=Parameters['Weights']
+    N=Parameters['Learning_Rate']
+    max_loop = Parameters['Max_Loops']
+    epsilon = Parameters['Epsilon']
+    threshold=Parameters['threshold']
+    Test_X=Parameters['Test_X']
+    Test_Y=Parameters['Test_Y']
+
+    # Initialize
+    count = 0
+    error = np.zeros((train_X.shape[1], 1))
+    cache=np.zeros((train_X.shape[1],1))
+    eps=0.000001
+    TL=[]#train loss
+    VL=[]#validation loss
+    train_accuracy=[]
+    val_accuracy=[]
+    test_accutacy=[]
+
+    while count <= max_loop:
+        count = count + 1
+        i=random.randint(0,train_X.shape[0]-1)
+        # Compute grad
+        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=grad.reshape(train_X.shape[1],1)
+        # Compute Cache
+        cache=cache+(grad**2)
+        # Gradient decent
+        W=W-N*grad/(np.sqrt(cache)+eps)
+
+        # Use relative error to decide whether to stop
+        if np.linalg.norm(W - error)/Max(W,error) < epsilon:
+            break
+        else:
+            error = W
+            Loss_Train = loss(train_X,train_Y,W)
+            Loss_Validation = loss(val_X,val_Y,W)
+            TL.append(Loss_Train[0])
+            VL.append(Loss_Validation[0])
+            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
+            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
+                  Loss_Validation)
+            print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
+    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    print('Adagrad Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
+    return VL, test_accutacy
+
+def AdaDelta(Parameters):
+    # Load parameters from Parameters
+    tic = time.time()
+    train_X = Parameters['Train_X']
+    train_Y = Parameters['Train_Y']
+    val_X = Parameters['Val_X']
+    val_Y = Parameters['Val_Y']
+    W = Parameters['Weights']
+    max_loop = Parameters['Max_Loops']
+    epsilon = Parameters['Epsilon']
+    threshold = Parameters['threshold']
+    Test_X = Parameters['Test_X']
+    Test_Y = Parameters['Test_Y']
+    decay_rate=Parameters['decoy_rate']
+
+    # Initialize
+    count = 0
+    error = np.zeros((train_X.shape[1], 1))
+    cache = np.zeros((train_X.shape[1], 1))
+    delt  = np.zeros((train_X.shape[1], 1))
+    eps = 0.000001
+    TL = []  # train loss
+    VL = []  # validation loss
+    train_accuracy = []
+    val_accuracy = []
+    test_accutacy = []
+
+    while count <= max_loop:
+        count = count + 1
+        i = random.randint(0, train_X.shape[0] - 1)
+
+        # Compute grad
+        grad = (hypothesis(W, train_X[i]) - train_Y[i]) * train_X[i]
+        grad = grad.reshape(train_X.shape[1], 1)
+
+        # Compute Cache
+        cache = decay_rate*cache +(1-decay_rate)*(grad ** 2)
+
+        # Gradient decent
+        deltW = -np.sqrt(delt+eps)*grad / (np.sqrt(cache) + eps)
+        W=W+deltW
+        delt  =decay_rate*delt+(1-decay_rate)*deltW**2
+        # Use relative error to decide whether to stop
+        if np.linalg.norm(W - error) / Max(W, error) < epsilon:
+            break
+        else:
+            error = W
+            Loss_Train = loss(train_X, train_Y, W)
+            Loss_Validation = loss(val_X, val_Y, W)
+            TL.append(Loss_Train[0])
+            VL.append(Loss_Validation[0])
+            train_accuracy.append(accuracy(train_X, train_Y, W, threshold))
+            val_accuracy.append(accuracy(val_X, val_Y, W, threshold))
+            test_accutacy.append(accuracy(Test_X, Test_Y, W, threshold))
+            print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
+                  Loss_Validation)
+            print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count - 1],
+                                                                         val_accuracy[count - 1],
+                                                                         test_accutacy[count - 1]))
+    Draw(count, TL, VL, train_accuracy, val_accuracy, test_accutacy)
+    print('AdaDelta Completed Successfully. Time used:{:.2f}'.format(time.time() - tic))
+    return VL, test_accutacy
+
+def RMSprop(Parameters):
+    # This method is NGA with the adaptive learning rate method: Adagrad
+    tic=time.time()
+    train_X=Parameters['Train_X']
+    train_Y=Parameters['Train_Y']
+    val_X=Parameters['Val_X']
+    val_Y=Parameters['Val_Y']
+    W=Parameters['Weights']
+    N=Parameters['Learning_Rate']
+    max_loop = Parameters['Max_Loops']
+    epsilon = Parameters['Epsilon']
+    threshold=Parameters['threshold']
+    Test_X=Parameters['Test_X']
+    Test_Y=Parameters['Test_Y']
+    decay_rate=Parameters['decoy_rate']
+
+    # Initialize
+    count = 0
+    error = np.zeros((train_X.shape[1], 1))
+    cache=np.zeros((train_X.shape[1],1))
+    eps=0.000001
+    TL=[]#train loss
+    VL=[]#validation loss
+    train_accuracy=[]
+    val_accuracy=[]
+    test_accutacy=[]
+
+    while count <= max_loop:
+        count = count + 1
+        i=random.randint(0,train_X.shape[0]-1)
+        # Compute grad
+        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=grad.reshape(train_X.shape[1],1)
+        # Compute Cache
+        cache=decay_rate*cache+(1-decay_rate)*(grad**2)
+        # Gradient decent
+        W=W-N*grad/(np.sqrt(cache)+eps)
+
+        # Use relative error to decide whether to stop
+        if np.linalg.norm(W - error)/Max(W,error) < epsilon:
+            break
+        else:
+            error = W
+            Loss_Train = loss(train_X,train_Y,W)
+            Loss_Validation = loss(val_X,val_Y,W)
+            TL.append(Loss_Train[0])
+            VL.append(Loss_Validation[0])
+            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
+            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
+                  Loss_Validation)
+            print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
+    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    print('RMSprop Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
+    return VL, test_accutacy
+
+def Adam(Parameters):
+    # This method is NGA with the adaptive learning rate method: Adagrad
+    tic=time.time()
+    train_X=Parameters['Train_X']
+    train_Y=Parameters['Train_Y']
+    val_X=Parameters['Val_X']
+    val_Y=Parameters['Val_Y']
+    W=Parameters['Weights']
+    N=Parameters['Learning_Rate']
+    max_loop = Parameters['Max_Loops']
+    epsilon = Parameters['Epsilon']
+    threshold=Parameters['threshold']
+    Test_X=Parameters['Test_X']
+    Test_Y=Parameters['Test_Y']
+    eps=Parameters['eps']
+    beta1=Parameters['Beta1']
+    beta2 = Parameters['Beta2']
+
+    # Initialize
+    count = 0
+    error = np.zeros((train_X.shape[1], 1))
+    m = np.zeros((train_X.shape[1],1))
+    v = np.zeros((train_X.shape[1], 1))
+    TL=[]#train loss
+    VL=[]#validation loss
+    train_accuracy=[]
+    val_accuracy=[]
+    test_accutacy=[]
+
+    while count <= max_loop:
+        count = count + 1
+        i=random.randint(0,train_X.shape[0]-1)
+
+        # Compute grad
+        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=grad.reshape(train_X.shape[1],1)
+
+        # Compute
+        m=beta1*m+(1-beta1)*grad
+        mt=m/(1-beta1**count)
+        v=beta2*v+(1-beta2)*(grad**2)
+        vt=v/(1-beta2**count)
+        # Gradient decent
+        W=W-N*mt/(np.sqrt(vt)+eps)
+
+        # Use relative error to decide whether to stop
+        if np.linalg.norm(W - error)/Max(W,error) < epsilon:
+            break
+        else:
+            error = W
+            Loss_Train = loss(train_X,train_Y,W)
+            Loss_Validation = loss(val_X,val_Y,W)
+            TL.append(Loss_Train[0])
+            VL.append(Loss_Validation[0])
+            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
+            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
+                  Loss_Validation)
+            print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
+    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    print('Adam Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
+    return VL, test_accutacy
+
 
 if __name__ == '__main__':
     # Read Data
+    tic=time.time()
     Data_Path = '/home/lucas/Codes/GitHub/ML_Assignment1/ML_Assignment1/DataSet/a9a.txt'
     Test_Path='/home/lucas/Codes/GitHub/ML_Assignment1/ML_Assignment1/DataSet/a9a.t'
     Data_Parameter, Data_Value = load_svmlight_file(Data_Path)
@@ -236,10 +484,44 @@ if __name__ == '__main__':
                'Test_X':Test_Parameter,
                'Test_Y':Test_Value,
                'Weights':W,
-               'Learning_Rate':0.0025,
-               'Max_Loops':2500,
-               'Epsilon':0.000001,
+               'Learning_Rate':0.025,
+               'Max_Loops':700,
+               'Epsilon':0.00000001,
                'threshold':0.4,
-               'gamma':0.9
+               'decoy_rate':0.9,
+               'eps':0.00000001,
+               'Beta1':0.9,
+               'Beta2':0.999
                }
-    Momentum(Parameter)
+    SGD_VL,SGD_test_accuracy=SGD(Parameter)
+    Momentum_VL,Momentum_test_accuracy=Momentum(Parameter)
+    NAG_VL,NAG_test_accuracy=NAG(Parameter)
+    Adagrad_VL,Adagrad_test_accuracy=Adagrad(Parameter)
+    AdaDelta_VL,AdaDelta_test_accuracy=AdaDelta(Parameter)
+    Adam_VL,Adam_test_accuracy=Adam(Parameter)
+    print('All Time Used:{}'.format(time.time()-tic))
+
+    plt.plot(np.arange(0,Parameter['Max_Loops']-1,1), SGD_VL[0:Parameter['Max_Loops']-1], label='SGD')
+    plt.plot(np.arange(0,Parameter['Max_Loops']-1,1), Momentum_VL[0:Parameter['Max_Loops']-1], label='Momentum')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), NAG_VL[0:Parameter['Max_Loops'] - 1], label='NAG')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), Adagrad_VL[0:Parameter['Max_Loops'] - 1], label='Adagrad')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), AdaDelta_VL[0:Parameter['Max_Loops'] - 1], label='AdaDelta')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), Adam_VL[0:Parameter['Max_Loops'] - 1], label='Adam')
+    plt.xlabel('loops')
+    plt.ylabel('loss')
+    plt.title('Validation Loss')
+    plt.legend()
+    plt.show()
+
+
+    plt.plot(np.arange(0,Parameter['Max_Loops']-1,1), SGD_test_accuracy[0:Parameter['Max_Loops']-1], label='SGD')
+    plt.plot(np.arange(0,Parameter['Max_Loops']-1,1), Momentum_test_accuracy[0:Parameter['Max_Loops']-1], label='Momentum')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), NAG_test_accuracy[0:Parameter['Max_Loops'] - 1], label='NAG')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), Adagrad_test_accuracy[0:Parameter['Max_Loops'] - 1], label='Adagrad')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), AdaDelta_test_accuracy[0:Parameter['Max_Loops'] - 1], label='AdaDelta')
+    plt.plot(np.arange(0, Parameter['Max_Loops'] - 1, 1), Adam_test_accuracy[0:Parameter['Max_Loops'] - 1], label='Adam')
+    plt.xlabel('loops')
+    plt.ylabel('loss')
+    plt.title('Test Accuracy')
+    plt.legend()
+    plt.show()

@@ -6,13 +6,13 @@ from sklearn.datasets import load_svmlight_file
 from sklearn.cross_validation import train_test_split
 
 
-def Draw(loops,train_loss,validation_loss,train_accuracy,val_accuracy,test_accuracy):
+def Draw(title,loops,train_loss,validation_loss,train_accuracy,val_accuracy,test_accuracy):
     #the loss
     plt.plot(np.arange(0,loops-1,1), train_loss[0:loops-1], label='Train Loss')
     plt.plot(np.arange(0,loops-1,1), validation_loss[0:loops-1], label='Validation Loss')
     plt.xlabel('loops')
     plt.ylabel('loss')
-    plt.title('Loss')
+    plt.title('{} Loss'.format(title))
     plt.legend()
     plt.show()
 
@@ -22,9 +22,21 @@ def Draw(loops,train_loss,validation_loss,train_accuracy,val_accuracy,test_accur
     plt.plot(np.arange(0, loops - 1, 1), test_accuracy[0:loops - 1], label='Test Accuracy')
     plt.xlabel('loops')
     plt.ylabel('Accuracy')
-    plt.title('Accuracy')
+    plt.title('{} Accuracy'.format(title))
     plt.legend()
     plt.show()
+
+
+def DataChange(filepath):
+    # To change the -1 values in Dataset to 0
+    date=''
+    with open(filepath,'r+') as fr:
+        for eachline in fr.readlines():
+            if '-1' in eachline:
+                eachline=eachline.replace('-1','+0')
+            date=date+eachline
+    with open(filepath,'r+') as fw:
+        fw.writelines(date)
 
 
 def Max(M1,M2): # Return the Matrix with a bigger norm
@@ -44,26 +56,41 @@ def hypothesis(W,X):
     return sigmoid(X.dot(W))
 
 
-def loss(X,Y,W):
-    n=X.shape[0]
-    temp=Y.transpose().dot(np.log10(hypothesis(W,X)))+(1-Y.transpose()).dot(np.log10(1-hypothesis(W,X)))
-    loss=(-1*temp)/n
+def Grad(X,Y,W,b,m_lambda):
+    grad=m_lambda*W
+    for i in range(X.shape[0]):
+        grad=grad-(compare(X,Y,W,b,i)*Y[i]*X[i]).reshape(X.shape[1],1)
+    return grad
+
+
+def loss(X,Y,W,b,m_lambda):
+    loss=0.5 * m_lambda * W.transpose().dot(W)
+    for i in range(X.shape[0]):
+        Tensor = Y[i][0] * (W.transpose().dot(X[i]) + b)
+        if Tensor < 1:
+            loss=loss+1-Tensor
+        else:
+            loss=loss+0
     return loss
 
 
-def accuracy(X,Y,W,threshold):
-    m,n=X.shape
-    p = np.zeros(shape=(m, 1))
-    h=hypothesis(W,X)
-    hit=0
-    for it in range(0, h.shape[0]):
-        if h[it] >= threshold:
-            p[it, 0] = 1
+def compare(X,Y,W,b,i):
+    if Y[i][0]*(W.transpose().dot(X[i])+b)<1:
+        return 1
+    else:
+        return 0
+
+
+def accuracy(X,Y,W,b):
+    count=0
+    temp=Y*(X.dot(W)+b)
+    for j in temp:
+        if j>=1:
+            count+=1
         else:
-            p[it, 0] = -1
-        if p[it,0]==Y[it][0]:
-            hit=hit+1
-    return hit/m
+            continue
+    rate=count/temp.shape[0]
+    return rate
 
 
 def SGD(Parameters):
@@ -109,7 +136,7 @@ def SGD(Parameters):
                                                                              val_accuracy[count - 1],
                                                                              test_accutacy[count - 1]))
     print('SGD Completed. Time Used:{}'.format(time.time()-tic))
-    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    Draw('SGD',count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     return VL,test_accutacy
 
 def Momentum(Parameters):
@@ -160,7 +187,7 @@ def Momentum(Parameters):
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
-    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    Draw('Momentum',count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('Momentum Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
     return VL,test_accutacy
 
@@ -214,7 +241,7 @@ def NAG(Parameters):
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
-    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    Draw('NAG',count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('Momentum Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
     return VL, test_accutacy
 
@@ -270,7 +297,7 @@ def Adagrad(Parameters):
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
-    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    Draw('Adagrad',count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('Adagrad Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
     return VL, test_accutacy
 
@@ -333,7 +360,7 @@ def AdaDelta(Parameters):
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count - 1],
                                                                          val_accuracy[count - 1],
                                                                          test_accutacy[count - 1]))
-    Draw(count, TL, VL, train_accuracy, val_accuracy, test_accutacy)
+    Draw('AdaDelta',count, TL, VL, train_accuracy, val_accuracy, test_accutacy)
     print('AdaDelta Completed Successfully. Time used:{:.2f}'.format(time.time() - tic))
     return VL, test_accutacy
 
@@ -390,7 +417,7 @@ def RMSprop(Parameters):
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
-    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    Draw('RMSprop',count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('RMSprop Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
     return VL, test_accutacy
 
@@ -454,7 +481,7 @@ def Adam(Parameters):
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
-    Draw(count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
+    Draw('Adam',count,TL,VL,train_accuracy,val_accuracy,test_accutacy)
     print('Adam Completed Successfully. Time used:{:.2f}'.format(time.time()-tic))
     return VL, test_accutacy
 
@@ -484,8 +511,8 @@ if __name__ == '__main__':
                'Test_X':Test_Parameter,
                'Test_Y':Test_Value,
                'Weights':W,
-               'Learning_Rate':0.025,
-               'Max_Loops':700,
+               'Learning_Rate':0.0025,
+               'Max_Loops':1500,
                'Epsilon':0.00000001,
                'threshold':0.4,
                'decoy_rate':0.9,

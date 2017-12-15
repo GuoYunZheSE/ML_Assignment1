@@ -56,10 +56,9 @@ def hypothesis(W,X):
     return sigmoid(X.dot(W))
 
 
-def Grad(X,Y,W,b,m_lambda):
+def Grad(X,Y,W,b,m_lambda,i):
     grad=m_lambda*W
-    for i in range(X.shape[0]):
-        grad=grad-(compare(X,Y,W,b,i)*Y[i]*X[i]).reshape(X.shape[1],1)
+    grad=grad-(compare(X,Y,W,b,i)*Y[i]*X[i]).reshape(X.shape[1],1)
     return grad
 
 
@@ -85,7 +84,7 @@ def accuracy(X,Y,W,b):
     count=0
     temp=Y*(X.dot(W)+b)
     for j in temp:
-        if j>=1:
+        if j>=0.02:
             count+=1
         else:
             continue
@@ -106,6 +105,8 @@ def SGD(Parameters):
     threshold=Parameters['threshold']
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
     count = 0
     error = np.zeros((col, 1))
     TL=[]#train loss
@@ -115,7 +116,7 @@ def SGD(Parameters):
     test_accutacy=[]
     while count <= max_loop:
         i = random.randint(0, train_X.shape[0] - 1)
-        grad = (hypothesis(W, train_X[i]) - train_Y[i]) * train_X[i]
+        grad =Grad(train_X,train_Y,W,b,m_lambda,i)
         grad = grad.reshape(train_X.shape[1], 1)
         count = count + 1
         W = W - N * grad
@@ -123,13 +124,13 @@ def SGD(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X, train_Y, W)
-            Loss_Validation = loss(val_X, val_Y, W)
+            Loss_Train = loss(train_X, train_Y, W, b, m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X, val_Y, W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X, train_Y, W, threshold))
-            val_accuracy.append(accuracy(val_X, val_Y, W, threshold))
-            test_accutacy.append(accuracy(Test_X, Test_Y, W, threshold))
+            train_accuracy.append(accuracy(train_X, train_Y, W, b))
+            val_accuracy.append(accuracy(val_X, val_Y, W, b))
+            test_accutacy.append(accuracy(Test_X, Test_Y, W, b))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                     Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count - 1],
@@ -153,6 +154,8 @@ def Momentum(Parameters):
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
     gamma=Parameters['decoy_rate']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
     count = 0
     error = np.zeros((train_X.shape[1], 1))
     velocity=np.zeros((train_X.shape[1],1))
@@ -166,7 +169,7 @@ def Momentum(Parameters):
         i=random.randint(0,train_X.shape[0]-1)
 
         # Compute grad
-        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=Grad(train_X,train_Y,W,b,m_lambda,i)
         grad=grad.reshape(train_X.shape[1],1)
         # Compute velocity
         velocity=gamma*velocity+N*grad
@@ -177,13 +180,13 @@ def Momentum(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X,train_Y,W)
-            Loss_Validation = loss(val_X,val_Y,W)
+            Loss_Train = loss(train_X,train_Y,W,b,m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X,val_Y,W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
-            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
-            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            train_accuracy.append(accuracy(train_X,train_Y,W,b))
+            val_accuracy.append(accuracy(val_X,val_Y,W,b))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,b))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
@@ -205,6 +208,8 @@ def NAG(Parameters):
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
     gamma=Parameters['decoy_rate']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
     count = 0
     error = np.zeros((train_X.shape[1], 1))
     velocity=np.zeros((train_X.shape[1],1))
@@ -218,7 +223,7 @@ def NAG(Parameters):
         count = count + 1
         i=random.randint(0,train_X.shape[0]-1)
         # Compute grad
-        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=Grad(train_X,train_Y,W,b,m_lambda,i)
         grad=grad.reshape(train_X.shape[1],1)
         # Compute velocity
         velocity_prev=velocity
@@ -231,13 +236,13 @@ def NAG(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X,train_Y,W)
-            Loss_Validation = loss(val_X,val_Y,W)
+            Loss_Train = loss(train_X,train_Y,W,b,m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X,val_Y,W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
-            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
-            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            train_accuracy.append(accuracy(train_X,train_Y,W,b))
+            val_accuracy.append(accuracy(val_X,val_Y,W,b))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,b))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
@@ -259,6 +264,8 @@ def Adagrad(Parameters):
     threshold=Parameters['threshold']
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
 
     # Initialize
     count = 0
@@ -275,7 +282,7 @@ def Adagrad(Parameters):
         count = count + 1
         i=random.randint(0,train_X.shape[0]-1)
         # Compute grad
-        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=Grad(train_X,train_Y,W,b,m_lambda,i)
         grad=grad.reshape(train_X.shape[1],1)
         # Compute Cache
         cache=cache+(grad**2)
@@ -287,13 +294,13 @@ def Adagrad(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X,train_Y,W)
-            Loss_Validation = loss(val_X,val_Y,W)
+            Loss_Train = loss(train_X,train_Y,W,b,m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X,val_Y,W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
-            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
-            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            train_accuracy.append(accuracy(train_X,train_Y,W,b))
+            val_accuracy.append(accuracy(val_X,val_Y,W,b))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,b))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
@@ -315,6 +322,8 @@ def AdaDelta(Parameters):
     Test_X = Parameters['Test_X']
     Test_Y = Parameters['Test_Y']
     decay_rate=Parameters['decoy_rate']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
 
     # Initialize
     count = 0
@@ -333,7 +342,7 @@ def AdaDelta(Parameters):
         i = random.randint(0, train_X.shape[0] - 1)
 
         # Compute grad
-        grad = (hypothesis(W, train_X[i]) - train_Y[i]) * train_X[i]
+        grad = Grad(train_X,train_Y,W,b,m_lambda,i)
         grad = grad.reshape(train_X.shape[1], 1)
 
         # Compute Cache
@@ -348,13 +357,13 @@ def AdaDelta(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X, train_Y, W)
-            Loss_Validation = loss(val_X, val_Y, W)
+            Loss_Train = loss(train_X, train_Y, W,b,m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X, val_Y, W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X, train_Y, W, threshold))
-            val_accuracy.append(accuracy(val_X, val_Y, W, threshold))
-            test_accutacy.append(accuracy(Test_X, Test_Y, W, threshold))
+            train_accuracy.append(accuracy(train_X, train_Y, W, b))
+            val_accuracy.append(accuracy(val_X, val_Y, W, b))
+            test_accutacy.append(accuracy(Test_X, Test_Y, W, b))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count - 1],
@@ -379,6 +388,8 @@ def RMSprop(Parameters):
     Test_X=Parameters['Test_X']
     Test_Y=Parameters['Test_Y']
     decay_rate=Parameters['decoy_rate']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
 
     # Initialize
     count = 0
@@ -395,7 +406,7 @@ def RMSprop(Parameters):
         count = count + 1
         i=random.randint(0,train_X.shape[0]-1)
         # Compute grad
-        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=Grad(train_X,train_Y,W,b,m_lambda,i)
         grad=grad.reshape(train_X.shape[1],1)
         # Compute Cache
         cache=decay_rate*cache+(1-decay_rate)*(grad**2)
@@ -407,13 +418,13 @@ def RMSprop(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X,train_Y,W)
-            Loss_Validation = loss(val_X,val_Y,W)
+            Loss_Train = loss(train_X,train_Y,W,b,m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X,val_Y,W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
-            train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
-            val_accuracy.append(accuracy(val_X,val_Y,W,threshold))
-            test_accutacy.append(accuracy(Test_X,Test_Y,W,threshold))
+            train_accuracy.append(accuracy(train_X,train_Y,W,b))
+            val_accuracy.append(accuracy(val_X,val_Y,W,b))
+            test_accutacy.append(accuracy(Test_X,Test_Y,W,b))
             print('Loop {}'.format(count), 'Loss_Train: ', Loss_Train, 'Loss_Validation: ',
                   Loss_Validation)
             print('Accuracy: Train: {}, Validation: {}, Test: {}'.format(train_accuracy[count-1],val_accuracy[count-1],test_accutacy[count-1]))
@@ -438,6 +449,8 @@ def Adam(Parameters):
     eps=Parameters['eps']
     beta1=Parameters['Beta1']
     beta2 = Parameters['Beta2']
+    b=Parameters['b']
+    m_lambda=Parameters['lambda']
 
     # Initialize
     count = 0
@@ -455,7 +468,7 @@ def Adam(Parameters):
         i=random.randint(0,train_X.shape[0]-1)
 
         # Compute grad
-        grad=(hypothesis(W,train_X[i])-train_Y[i])*train_X[i]
+        grad=Grad(train_X,train_Y,W,b,m_lambda,i)
         grad=grad.reshape(train_X.shape[1],1)
 
         # Compute
@@ -471,8 +484,8 @@ def Adam(Parameters):
             break
         else:
             error = W
-            Loss_Train = loss(train_X,train_Y,W)
-            Loss_Validation = loss(val_X,val_Y,W)
+            Loss_Train = loss(train_X,train_Y,W,b,m_lambda)/train_X.shape[0]
+            Loss_Validation = loss(val_X,val_Y,W,b,m_lambda)/val_X.shape[0]
             TL.append(Loss_Train[0])
             VL.append(Loss_Validation[0])
             train_accuracy.append(accuracy(train_X,train_Y,W,threshold))
@@ -511,14 +524,16 @@ if __name__ == '__main__':
                'Test_X':Test_Parameter,
                'Test_Y':Test_Value,
                'Weights':W,
-               'Learning_Rate':0.0025,
+               'Learning_Rate':0.025,
                'Max_Loops':1500,
                'Epsilon':0.00000001,
                'threshold':0.4,
                'decoy_rate':0.9,
                'eps':0.00000001,
                'Beta1':0.9,
-               'Beta2':0.999
+               'Beta2':0.999,
+               'lambda': 0.01,  # regularize, C=1/lambda
+               'b': 0.01
                }
     SGD_VL,SGD_test_accuracy=SGD(Parameter)
     Momentum_VL,Momentum_test_accuracy=Momentum(Parameter)

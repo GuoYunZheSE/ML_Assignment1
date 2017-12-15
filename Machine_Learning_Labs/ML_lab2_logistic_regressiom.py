@@ -496,12 +496,13 @@ if __name__ == '__main__':
                'Test_X':Test_Parameter,
                'Test_Y':Test_Value,
                'Weights':W,
-               'Learning_Rate':0.02,
-               'Max_Loops':500,
+               'Learning_Rate':0.01,
+               'Max_Loops':5000,
                'Epsilon':0.00000001,
                'threshold':0.4,
                'decoy_rate':0.9,
-               'eps':0.00000001,               'Beta1':0.9,
+               'eps':0.00000001,
+               'Beta1':0.9,
                'Beta2':0.999
                }
     SGD_VL,SGD_test_accuracy=SGD(Parameter)

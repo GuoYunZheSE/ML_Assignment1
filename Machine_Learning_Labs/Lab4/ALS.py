@@ -41,7 +41,7 @@ class ALS:
                 vec=self.Q_Matrix[i]
                 N=np.count_nonzero(vec)
                 FRu=fixed_vecs.T.dot(R_i.T)
-            vec_updated=spsolve(sparse.csr_matrix(vec.dot(vec.T))+lambda_diagonal*N,FRu)
+            vec_updated=spsolve((vec.dot(vec.T)*sparse.eye(self.K))+lambda_diagonal*N,FRu)
             solve_vecs[i]=vec_updated.T
             if i % 100 ==0:
                 print('Fixed:{} Solved 1000 vectors in {:0.2f}s'.format(matrix_fixed,time.time()-tic))
@@ -49,8 +49,9 @@ class ALS:
 
 
     def RMSE(self):
-        Predict = self.P_Matrix.dot(self.Q_Matrix)
-        SEL = ((self.Rating_Matrix - Predict) ** 2).sum()
+        Predict = self.P_Matrix.dot(self.Q_Matrix.T)
+        print(type(self.Rating_Matrix - Predict))
+        SEL = ((self.Rating_Matrix - Predict).asarray() ** 2).sum()
         return np.sqrt(SEL / (self.rows * self.cols))
 
 

@@ -2,9 +2,12 @@ import numpy as np
 import sklearn
 import matplotlib
 import time
+import scipy.sparse as sparse
+from scipy.sparse.linalg import spsolve
+from ALS import ALS
 
-
-def loadMovieLensTrain(parametes,directory_path):
+def loadMovieLens(parametes,directory_path):
+    tic=time.time()
     rows=parametes['Row']
     cols=parametes['Cols']
     mode=parametes['Mode']
@@ -18,6 +21,8 @@ def loadMovieLensTrain(parametes,directory_path):
             item_id=int(origin_data[i][1])
             rating=origin_data[i][2]
             Rating_Matrix[user_id-1,item_id-1]=rating
+        Rating_Matrix=sparse.csr_matrix(Rating_Matrix)
+        print('Loading MovieLen Successfully. Time Used:{:0.2f}'.format(time.time()-tic))
         return Rating_Matrix
 
 
@@ -51,7 +56,7 @@ def loss(R,P,Q,m_lambda):
                                                              Nqi*Q_temp.dot(Nqi*Q_temp.transpose()))
     return Loss
 
-
+'''
 def ALS(R,P,Q,Parameters):
     tic=time.time()
     count = 1
@@ -94,7 +99,7 @@ def ALS(R,P,Q,Parameters):
             rmse=RMSE(R,P,Q)
         print('Loops:{}, RMSE:{:0.5f}'.format(count,rmse))
     print('ALS Completed, Time:{:0.2f}'.format(count, time.time() - tic))
-
+'''
 
 
 def RMSE(R,P,Q):
@@ -109,11 +114,13 @@ if __name__ == '__main__':
         'Cols':1682,
         'Mode':0,
         'K':4,
-        'lambda':0.01,
+        'Lambda':0.01,
         'Max Loops':10000,
         'epsilon':0.00001
     }
-    Rating_Matrix = loadMovieLensTrain(Parameters,dic_path)
-    P_Matrix=np.random.random(size=(Parameters['Row'],Parameters['K']))
-    Q_Matrix=np.random.random(size=(Parameters['K'],Parameters['Cols']))
-    ALS(Rating_Matrix,P_Matrix,Q_Matrix,Parameters)
+    Rating_Matrix = loadMovieLens(Parameters,dic_path)
+    # P_Matrix=np.random.random(size=(Parameters['Row'],Parameters['K']))
+    # Q_Matrix=np.random.random(size=(Parameters['K'],Parameters['Cols']))
+    # ALS(Rating_Matrix,P_Matrix,Q_Matrix,Parameters)
+    ALS_0=ALS(Rating_Matrix,Parameters)
+    ALS_0.train()

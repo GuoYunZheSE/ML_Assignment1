@@ -108,13 +108,13 @@ def RMSE(R,P,Q):
     return np.sqrt(SEL/(R.shape[0]*R.shape[1]))
 
 if __name__ == '__main__':
-    dic_path='/home/lucas/Codes/GitHub/ML_Assignment1/ML_Assignment1/DataSet/ml-100k'
+    dic_path=r'C:\Users\DELL\Documents\GitHub\ML_Assignment1\ML_Assignment1\DataSet\ml-100k'
     Parameters={
         'Row':943,
         'Cols':1682,
         'Mode':0,
-        'K':4,
-        'Lambda':0.01,
+        'K':30,
+        'Lambda':0.001,
         'Max Loops':10000,
         'epsilon':0.00001
     }

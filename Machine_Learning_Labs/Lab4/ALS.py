@@ -9,7 +9,7 @@ from scipy.sparse.linalg import spsolve
 class ALS:
 
 
-    def __init__(self,R,Parameters):
+    def __init__(self,R,W,TR,TW,Parameters):
         self.Rating_Matrix=R
         self.rows=Parameters['Row']
         self.cols=Parameters['Cols']
@@ -17,79 +17,69 @@ class ALS:
         self.m_lambda=Parameters['Lambda']
         self.max_loops=Parameters['Max Loops']
         self.epsilon=Parameters['epsilon']
+        self.Weight_Matrix=W
+        self.Test_Rating_Matrix=TR
+        self.Test_Weight_Matrix=TW
 
 
-    def iteraton(self, matrix_fixed, fixed_vecs):
+    def iteraton(self, matrix_fixed):
         tic=time.time()
         if matrix_fixed== 'P_Matrix':
-            num_solve=self.cols
+            solve_vecs=np.linalg.solve(np.dot(self.P_Matrix.T,self.P_Matrix)+self.m_lambda*np.eye(self.K),
+                                       np.dot(self.P_Matrix.T,self.Rating_Matrix)).T
         else:
-            num_solve=self.rows
-        num_fixed=fixed_vecs.shape[0]
-
-        # Sparse matrix with ones on diagonal
-        lambda_diagonal=self.m_lambda*sparse.eye(self.K)
-        solve_vecs=np.zeros(shape=(num_solve,self.K))
-        for i in range(num_solve):
-            if matrix_fixed== 'Q_Matrix':
-                R_i=self.Rating_Matrix[i].toarray()
-                vec=self.P_Matrix[i]
-                N=np.count_nonzero(vec)
-                FRu = fixed_vecs.T.dot(R_i.T)
-            else:
-                R_i=self.Rating_Matrix[:,i].T.toarray()
-                vec=self.Q_Matrix[i]
-                N=np.count_nonzero(vec)
-                FRu=fixed_vecs.T.dot(R_i.T)
-            vec_updated=spsolve((vec.dot(vec.T)*sparse.eye(self.K))+lambda_diagonal*N,FRu)
-            solve_vecs[i]=vec_updated.T
-            if i % 500 ==0:
-                print('Fixed:{} Solved 500 vectors in {:0.2f}s'.format(matrix_fixed,time.time()-tic))
+            solve_vecs=np.linalg.solve(np.dot(self.Q_Matrix.T,self.Q_Matrix)+self.m_lambda*np.eye(self.K),
+                                        np.dot(self.Q_Matrix.T,self.Rating_Matrix.T)).T
+        print('Update {} Successfully. Time:{:0.5f}s'.format(matrix_fixed,time.time()-tic))
         return solve_vecs
 
 
-    def RMSE(self):
+    def RMSE(self,Rating_Matrix):
         Predict = self.P_Matrix.dot(self.Q_Matrix.T)
-        SEL = (np.asarray((self.Rating_Matrix - Predict) )** 2).sum()
+        SEL = (np.asarray((Rating_Matrix - Predict) )** 2).sum()
         return np.sqrt(SEL / (self.rows * self.cols))
 
 
     def draw(self):
         loops=self.max_loops
-        plt.plot(np.arange(0, loops - 1, 1), self.rmse[0:loops - 1], label='RMSE')
+        plt.plot(np.arange(0, loops - 1, 1), self.train_rmse[0:loops - 1], label='Train_RMSE')
+        plt.plot(np.arange(0, loops - 1, 1), self.test_rmse[0:loops - 1], label='Test_RMSE')
         plt.xlabel('loops')
         plt.ylabel('RMSE')
         plt.title('RMSE')
         plt.legend()
         plt.show()
 
-    def loss(self):
-        R=self.Rating_Matrix.toarray()
-        P=self.P_Matrix
-        Q=self.Q_Matrix.T
-        Predict = P.dot(Q)
-        m = R.shape[0]
-        n = R.shape[1]
-        k = P.shape[1]
-        Loss = 0
+        loops=self.max_loops
+        plt.plot(np.arange(0, loops - 1, 1), self.test_Loss[0:loops - 1], label='Test_Loss')
+        plt.plot(np.arange(0, loops - 1, 1), self.train_Loss[0:loops - 1], label='Train_Loss')
+        plt.xlabel('loops')
+        plt.ylabel('Loss')
+        plt.title('Loss')
+        plt.legend()
+        plt.show()
 
-        for u in range(0, m - 1):
-            for i in range(0, n - 1):
-                if R[u, i] == 0:
-                    continue
-                else:
-                    Npu = np.count_nonzero(P, 1)[u]
-                    Nqi = np.count_nonzero(Q, 0)[i]
-                    P_temp = P[u, :].reshape(1, k)
-                    Q_temp = Q[:, i].reshape(k, 1)
-                    Loss = Loss + np.square(R[u, i] - Predict[u, i]) + self.m_lambda * (Npu * P_temp.dot(P_temp.transpose()) +Nqi * Q_temp.dot(Q_temp.transpose()))
-        return Loss
+
+    def loss(self,Rating_Matrix,Weight_Matrix):
+        Predict=self.P_Matrix.dot(self.Q_Matrix.T)
+        SEL = np.sum((Weight_Matrix * np.asarray(Rating_Matrix - Predict))**2)
+        RP=0
+        RQ=0
+        for i in range(0,self.rows):
+            RP+=self.m_lambda*self.P_Matrix[i,:].dot(self.P_Matrix[i,:].T)
+        for i in range(0,self.cols):
+            RQ+=self.m_lambda*self.Q_Matrix[i,:].dot(self.Q_Matrix[i,:].T)
+        LOSS=SEL+RP+RQ
+        return LOSS/(self.rows*self.cols)
+
 
 
     def train(self):
         tic=time.time()
-        self.rmse=[]
-        self.Loss=[]
+        self.train_rmse=[]
+        self.train_Loss=[]
+        self.test_rmse=[]
+        self.test_Loss=[]
         self.P_Matrix=np.random.normal(size=(self.rows,self.K))
         self.Q_Matrix=np.random.normal(size=(self.cols,self.K))
         count=0
@@ -100,14 +90,22 @@ class ALS:
                 break
             else:
                 print('Update User Matrix for the {} time'.format(count))
-                self.P_Matrix=self.iteraton('Q_Matrix',sparse.csr_matrix(self.Q_Matrix))
+                self.P_Matrix=self.iteraton('Q_Matrix')
                 print('Update Item Matrix for the {} time'.format(count))
-                self.Q_Matrix=self.iteraton('P_Matrix',sparse.csr_matrix(self.P_Matrix))
-                rmse=self.RMSE()
-                #loss=self.loss()
-                print('Loops:{}, RMSE:{:0.3f}'.format(count, rmse))
-                self.rmse.append(rmse)
-                #self.Loss.append(loss)
+                self.Q_Matrix=self.iteraton('P_Matrix')
+
+                train_rmse=self.RMSE(self.Rating_Matrix)
+                train_loss=self.loss(self.Rating_Matrix,self.Weight_Matrix)
+                test_rmse=self.RMSE(self.Test_Rating_Matrix)
+                test_loss=self.loss(self.Test_Rating_Matrix,self.Test_Weight_Matrix)
+
+                self.train_rmse.append(train_rmse)
+                self.train_Loss.append(train_loss)
+                self.test_rmse.append(test_rmse)
+                self.test_Loss.append(test_loss)
+
+                print('Loops:{} Completed. Train: RMSE:{:0.2f},Loss:{:0.2f}; Test: RMSE:{:0.2f},Loss:{:0.2f}'
+                      .format(count, train_rmse,train_loss,test_rmse,test_loss))
+
                 count=count+1
-            print('ALS Completed, Time:{:0.2f}s'.format(count, time.time() - tic))
-        self.draw()
+            print('ALS Completed, Time:{:0.2f}s'.format(time.time() - tic))
